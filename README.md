@@ -1,7 +1,7 @@
 # FashionMNIST CNN in Rust
 
-A Rust port of the PyTorch CNN from `CNN.ipynb`, built with the
-[burn](https://burn.dev) deep learning framework (pure Rust, no libtorch).
+A Rust port of the PyTorch CNN from [this Colab notebook](https://colab.research.google.com/drive/1RbgsunRZhY__onzDIwo8MyQOy3DNcxoS?usp=sharing),
+built with the [burn](https://burn.dev) deep learning framework (pure Rust, no libtorch).
 
 It replicates `FashionMNISTModelV2` from the notebook: a TinyVGG-style
 convolutional network trained on FashionMNIST.
