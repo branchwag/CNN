@@ -1,0 +1,9 @@
+[package]
+name = "cnn_rust"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+burn = { version = "0.21.0", features = ["train", "ndarray", "autodiff"] }
+flate2 = "1.1.9"
+ureq = "3.3.0"

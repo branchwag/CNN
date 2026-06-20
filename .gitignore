@@ -1,0 +1,11 @@
+CNN.ipynb
+script.txt
+
+
+# Added by cargo
+
+/target
+
+# Downloaded dataset and training outputs
+/data
+/artifacts
