@@ -28,10 +28,26 @@ fn main() {
             "1" => {
                 let device = WgpuDevice::DefaultDevice;
                 println!("Training device: {device:?}");
-                if let Err(e) = training::run::<TrainBackend>(ARTIFACT_DIR, device) {
-                    eprintln!("{e}");
-                    println!();
-                    continue;
+
+                let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    training::run::<TrainBackend>(ARTIFACT_DIR, device)
+                }));
+
+                match outcome {
+                    Ok(Ok(())) => {}
+                    Ok(Err(e)) => {
+                        eprintln!("{e}");
+                        println!();
+                        continue;
+                    }
+                    Err(_) => {
+                        // Burn panics internally when the user presses 'q' to stop training.
+                        // Clean up whatever partial artifacts were written so the next run starts fresh.
+                        eprintln!("Training stopped. Cleaning up partial artifacts...");
+                        let _ = std::fs::remove_dir_all(ARTIFACT_DIR);
+                        println!();
+                        continue;
+                    }
                 }
             }
             "2" => {
