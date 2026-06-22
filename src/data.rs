@@ -48,23 +48,23 @@ pub struct FashionMnistDataset {
 }
 
 impl FashionMnistDataset {
-    pub fn train() -> Self {
+    pub fn train() -> Result<Self, String> {
         Self::new("train-images-idx3-ubyte", "train-labels-idx1-ubyte")
     }
 
-    pub fn test() -> Self {
+    pub fn test() -> Result<Self, String> {
         Self::new("t10k-images-idx3-ubyte", "t10k-labels-idx1-ubyte")
     }
 
-    fn new(images_file: &str, labels_file: &str) -> Self {
-        let images = read_images(&ensure_file(images_file));
-        let labels = read_labels(&ensure_file(labels_file));
+    fn new(images_file: &str, labels_file: &str) -> Result<Self, String> {
+        let images_path = ensure_file(images_file)?;
+        let labels_path = ensure_file(labels_file)?;
+        let images = read_images(&images_path);
+        let labels = read_labels(&labels_path);
 
-        assert_eq!(
-            images.len(),
-            labels.len(),
-            "image/label count mismatch for {images_file}"
-        );
+        if images.len() != labels.len() {
+            return Err(format!("image/label count mismatch for {images_file}"));
+        }
 
         let items = images
             .into_iter()
@@ -72,7 +72,7 @@ impl FashionMnistDataset {
             .map(|(image, label)| FashionMnistItem { image, label })
             .collect();
 
-        Self { items }
+        Ok(Self { items })
     }
 }
 
@@ -88,36 +88,40 @@ impl Dataset<FashionMnistItem> for FashionMnistDataset {
 
 /// Returns the path to a decompressed IDX file, downloading + gunzipping it on
 /// first use (the `.gz` lives on the mirror; we cache the plain file locally).
-fn ensure_file(name: &str) -> PathBuf {
+fn ensure_file(name: &str) -> Result<PathBuf, String> {
     let dir = Path::new(DATA_DIR);
-    fs::create_dir_all(dir).expect("create data dir");
+    fs::create_dir_all(dir).map_err(|e| format!("Failed to create data dir: {e}"))?;
 
     let path = dir.join(name);
     if path.exists() {
-        return path;
+        return Ok(path);
     }
 
     let url = format!("{BASE_URL}/{name}.gz");
     println!("Downloading {url}");
-    let gz = download(&url);
+    let gz = download(&url).map_err(|e| format!("Could not download {name}: {e}"))?;
 
     let mut decoder = flate2::read::GzDecoder::new(&gz[..]);
     let mut bytes = Vec::new();
-    decoder.read_to_end(&mut bytes).expect("gunzip IDX file");
-    fs::write(&path, &bytes).expect("cache decompressed IDX file");
+    decoder
+        .read_to_end(&mut bytes)
+        .map_err(|e| format!("Failed to decompress {name}: {e}"))?;
+    fs::write(&path, &bytes).map_err(|e| format!("Failed to cache {name}: {e}"))?;
 
-    path
+    Ok(path)
 }
 
-fn download(url: &str) -> Vec<u8> {
-    let mut reader = ureq::get(url)
+fn download(url: &str) -> Result<Vec<u8>, String> {
+    let response = ureq::get(url)
         .call()
-        .expect("http GET failed")
-        .into_body()
-        .into_reader();
+        .map_err(|e| format!("{e}"))?;
     let mut buf = Vec::new();
-    reader.read_to_end(&mut buf).expect("read response body");
-    buf
+    response
+        .into_body()
+        .into_reader()
+        .read_to_end(&mut buf)
+        .map_err(|e| format!("{e}"))?;
+    Ok(buf)
 }
 
 /// Parses an IDX3 image file: 16-byte header (magic, count, rows, cols) then

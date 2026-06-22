@@ -25,7 +25,7 @@ pub fn run<B: Backend>(artifact_dir: &str, device: B::Device, index: usize) -> R
         .load_file(format!("{artifact_dir}/model"), &CompactRecorder::new(), &device)
         .map_err(|e| format!("Failed to load model weights: {e}"))?;
 
-    let dataset = FashionMnistDataset::test();
+    let dataset = FashionMnistDataset::test()?;
     let item = dataset.get(index).ok_or_else(|| {
         format!("Index {index} is out of range (test set has {} images).", dataset.len())
     })?;

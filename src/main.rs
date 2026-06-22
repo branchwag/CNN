@@ -21,7 +21,11 @@ fn main() {
 
         match prompt("Choose an option [1/2]: ").trim() {
             "1" => {
-                training::run::<MyAutodiffBackend>(ARTIFACT_DIR, device.clone());
+                if let Err(e) = training::run::<MyAutodiffBackend>(ARTIFACT_DIR, device.clone()) {
+                    eprintln!("{e}");
+                    println!();
+                    continue;
+                }
             }
             "2" => {
                 if !std::path::Path::new(&format!("{ARTIFACT_DIR}/config.json")).exists() {

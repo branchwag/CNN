@@ -37,7 +37,7 @@ pub struct TrainingConfig {
     pub learning_rate: f64,
 }
 
-pub fn run<B: AutodiffBackend>(artifact_dir: &str, device: B::Device) {
+pub fn run<B: AutodiffBackend>(artifact_dir: &str, device: B::Device) -> Result<(), String> {
     let config = TrainingConfig::new(ModelConfig::new(), SgdConfig::new());
 
     std::fs::create_dir_all(artifact_dir).ok();
@@ -53,12 +53,12 @@ pub fn run<B: AutodiffBackend>(artifact_dir: &str, device: B::Device) {
         .batch_size(config.batch_size)
         .shuffle(config.seed)
         .num_workers(config.num_workers)
-        .build(FashionMnistDataset::train());
+        .build(FashionMnistDataset::train()?);
 
     let dataloader_test = DataLoaderBuilder::<B::InnerBackend, _, _>::new(FashionMnistBatcher)
         .batch_size(config.batch_size)
         .num_workers(config.num_workers)
-        .build(FashionMnistDataset::test());
+        .build(FashionMnistDataset::test()?);
 
     let learner = Learner::new(
         config.model.init::<B>(&device),
@@ -82,6 +82,8 @@ pub fn run<B: AutodiffBackend>(artifact_dir: &str, device: B::Device) {
         .model
         .save_file(format!("{artifact_dir}/model"), &CompactRecorder::new())
         .expect("save trained model");
+
+    Ok(())
 }
 
 /// Mirrors the notebook's final cells: run the trained model over a handful of
@@ -93,7 +95,7 @@ fn print_sample_predictions<B: Backend>(model: &Model<B>) {
         .next()
         .expect("model should live on at least one device");
 
-    let dataset = FashionMnistDataset::test();
+    let dataset = FashionMnistDataset::test().expect("test set unavailable after training");
     let items: Vec<_> = (0..9).filter_map(|i| dataset.get(i)).collect();
     let truths: Vec<u8> = items.iter().map(|item| item.label).collect();
 
