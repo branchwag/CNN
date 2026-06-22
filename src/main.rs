@@ -3,16 +3,21 @@ mod model;
 mod predict;
 mod training;
 
-use burn::backend::{ndarray::NdArrayDevice, Autodiff, NdArray};
+use burn::backend::{
+    ndarray::{NdArray, NdArrayDevice},
+    wgpu::{Wgpu, WgpuDevice},
+    Autodiff,
+};
 use std::io::Write;
 
 const ARTIFACT_DIR: &str = "artifacts";
 
 fn main() {
-    type MyBackend = NdArray<f32>;
-    type MyAutodiffBackend = Autodiff<MyBackend>;
-
-    let device = NdArrayDevice::Cpu;
+    // Training uses the Wgpu backend, which auto-selects the best available GPU
+    // (discrete > integrated > CPU software renderer). Inference stays on NdArray
+    // since prediction is fast enough on CPU and avoids a GPU round-trip.
+    type TrainBackend = Autodiff<Wgpu>;
+    type InferBackend = NdArray<f32>;
 
     loop {
         println!("FashionMNIST CNN");
@@ -21,7 +26,9 @@ fn main() {
 
         match prompt("Choose an option [1/2]: ").trim() {
             "1" => {
-                if let Err(e) = training::run::<MyAutodiffBackend>(ARTIFACT_DIR, device.clone()) {
+                let device = WgpuDevice::DefaultDevice;
+                println!("Training device: {device:?}");
+                if let Err(e) = training::run::<TrainBackend>(ARTIFACT_DIR, device) {
                     eprintln!("{e}");
                     println!();
                     continue;
@@ -38,7 +45,7 @@ fn main() {
                     .trim()
                     .parse()
                     .unwrap_or(0);
-                if let Err(e) = predict::run::<MyBackend>(ARTIFACT_DIR, device.clone(), index) {
+                if let Err(e) = predict::run::<InferBackend>(ARTIFACT_DIR, NdArrayDevice::Cpu, index) {
                     eprintln!("{e}");
                     println!();
                     continue;
