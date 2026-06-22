@@ -14,26 +14,39 @@ fn main() {
 
     let device = NdArrayDevice::Cpu;
 
-    println!("FashionMNIST CNN");
-    println!("  1. Train a new model");
-    println!("  2. Predict on a test image");
+    loop {
+        println!("FashionMNIST CNN");
+        println!("  1. Train a new model");
+        println!("  2. Predict on a test image");
 
-    match prompt("Choose an option [1/2]: ").trim() {
-        "1" => {
-            training::run::<MyAutodiffBackend>(ARTIFACT_DIR, device);
+        match prompt("Choose an option [1/2]: ").trim() {
+            "1" => {
+                training::run::<MyAutodiffBackend>(ARTIFACT_DIR, device.clone());
+            }
+            "2" => {
+                if !std::path::Path::new(&format!("{ARTIFACT_DIR}/config.json")).exists() {
+                    eprintln!("No trained model found in '{ARTIFACT_DIR}/'. Run option 1 to train first.");
+                    println!();
+                    continue;
+                }
+                // Inference doesn't need autodiff, so use the plain backend.
+                let index = prompt("Test image index (0-9999): ")
+                    .trim()
+                    .parse()
+                    .unwrap_or(0);
+                if let Err(e) = predict::run::<MyBackend>(ARTIFACT_DIR, device.clone(), index) {
+                    eprintln!("{e}");
+                    println!();
+                    continue;
+                }
+            }
+            other => {
+                eprintln!("'{other}' is not a valid option.");
+                println!();
+                continue;
+            }
         }
-        "2" => {
-            // Inference doesn't need autodiff, so use the plain backend.
-            let index = prompt("Test image index (0-9999): ")
-                .trim()
-                .parse()
-                .unwrap_or(0);
-            predict::run::<MyBackend>(ARTIFACT_DIR, device, index);
-        }
-        other => {
-            eprintln!("'{other}' is not a valid option. Run again and pick 1 or 2.");
-            std::process::exit(1);
-        }
+        break;
     }
 }
 

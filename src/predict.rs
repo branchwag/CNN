@@ -13,21 +13,22 @@ use burn::{
     record::CompactRecorder,
 };
 
-pub fn run<B: Backend>(artifact_dir: &str, device: B::Device, index: usize) {
+pub fn run<B: Backend>(artifact_dir: &str, device: B::Device, index: usize) -> Result<(), String> {
     // Rebuild the architecture from the saved config, then load the weights.
-    let config = TrainingConfig::load(format!("{artifact_dir}/config.json"))
-        .expect("config.json not found — train the model first with `cargo run --release`");
+    let config = TrainingConfig::load(format!("{artifact_dir}/config.json")).map_err(|_| {
+        format!("No trained model found in '{artifact_dir}/'. Run option 1 to train first.")
+    })?;
 
     let model: Model<B> = config
         .model
         .init::<B>(&device)
         .load_file(format!("{artifact_dir}/model"), &CompactRecorder::new(), &device)
-        .expect("failed to load model.mpk — train the model first");
+        .map_err(|e| format!("Failed to load model weights: {e}"))?;
 
     let dataset = FashionMnistDataset::test();
-    let item = dataset
-        .get(index)
-        .unwrap_or_else(|| panic!("index {index} is out of range (test set has {} images)", dataset.len()));
+    let item = dataset.get(index).ok_or_else(|| {
+        format!("Index {index} is out of range (test set has {} images).", dataset.len())
+    })?;
 
     print_image(&item.image);
 
@@ -47,6 +48,7 @@ pub fn run<B: Backend>(artifact_dir: &str, device: B::Device, index: usize) {
         "Result:     {}",
         if predicted == truth { "correct" } else { "wrong" }
     );
+    Ok(())
 }
 
 /// Renders a 28x28 grayscale image as ASCII art. Each pixel becomes two
