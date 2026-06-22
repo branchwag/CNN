@@ -34,7 +34,7 @@ fn main() {
                 }));
 
                 match outcome {
-                    Ok(Ok(())) => {}
+                    Ok(Ok(())) => { continue; }
                     Ok(Err(e)) => {
                         eprintln!("{e}");
                         println!();
