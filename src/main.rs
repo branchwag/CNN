@@ -29,9 +29,18 @@ fn main() {
                 let device = WgpuDevice::DefaultDevice;
                 println!("Training device: {device:?}");
 
+                std::panic::set_hook(Box::new(|info| {
+                    let msg = info.to_string();
+                    let is_training_stop = msg.contains("Killing training from user input.")
+                        || msg.contains("SendError(");
+                    if !is_training_stop {
+                        eprintln!("{info}");
+                    }
+                }));
                 let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     training::run::<TrainBackend>(ARTIFACT_DIR, device)
                 }));
+                let _ = std::panic::take_hook();
 
                 match outcome {
                     Ok(Ok(())) => { continue; }

@@ -71,6 +71,7 @@ pub fn run<B: AutodiffBackend>(artifact_dir: &str, device: B::Device) -> Result<
         .metric_valid_numeric(AccuracyMetric::new())
         .metric_train_numeric(LossMetric::new())
         .metric_valid_numeric(LossMetric::new())
+        .with_application_logger(None)
         .with_file_checkpointer(CompactRecorder::new())
         .num_epochs(config.num_epochs)
         .summary()
