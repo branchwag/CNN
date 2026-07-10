@@ -41,6 +41,8 @@ hyperparameters. Training and validation accuracy/loss are shown live via burn's
 dashboard, and a few sample predictions are printed at the end. The trained
 model is saved to `artifacts/`.
 
+![Training dashboard](demoscreenshot.png)
+
 **2. Predict** — Loads the already-trained model from `artifacts/` (no
 retraining) and asks for a test image index (0–9999). It draws that image as
 ASCII art in the terminal and prints the predicted class alongside the true one:
